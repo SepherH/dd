@@ -23,7 +23,7 @@
 ### 第一階段：基礎建設 (進行中)
 - [x] 建立專案結構
 - [x] 設定開發環境 (TypeScript + Bun)
-- [x] 從 JavaScript/MongoDB 遷移到 TypeScript/MariaDB
+- [x] 從 JavaScript 遷移到 TypeScript/MariaDB
 - [x] 完成核心模組的 TypeScript 轉換:
   - [x] 專案配置 (tsconfig.json, package.json)
   - [x] 型別定義 (types/index.ts)
@@ -76,7 +76,7 @@
 - [x] 專案配置與依賴整理
   - [x] 更新 tsconfig.json 支援 Bun 型別
   - [x] 調整 config.ts 提供完整配置物件
-  - [x] 清理 MongoDB 殘留
+  - [x] 清理舊資料庫架構殘留
     - [x] 移除 offenderRecord.js
     - [x] 移除 index.js
     - [x] 將遷移腳本移至專用工具目錄
@@ -102,7 +102,7 @@
   - [x] 修正 AI 服務模組的匯出/匯入問題
   - [x] 解決型別兼容性問題
 - [x] 實現資料遷移工具
-  - [x] 建立 MongoDB 到 MariaDB 的遷移腳本 (database/migration.ts)
+  - [x] 建立資料遷移腳本 (database/migration.ts)
   - [x] 支援批次處理和進度追蹤
 
 ### 第五階段：API 開發與資料庫整合
@@ -134,10 +134,10 @@
 
 ### 已解決問題 ✅
 1. ✅ 修復 router.ts 中 Bun 模組無法識別的錯誤
-2. ✅ 移除 MongoDB 殘留代碼
+2. ✅ 移除舊版資料庫架構殘留代碼
    - ✅ 移除 offenderRecord.js
    - ✅ 移除 index.js
-   - ✅ 將遷移腳本移至專用工具目錄
+   - ✅ 將資料遷移腳本移至專用工具目錄
 3. ✅ 解決伺服器啟動失敗問題
    - ✅ 處理 OpenAI API 金鑰缺失導致的錯誤
    - ✅ 增加 AI 服務的模擬模式，提供測試資料

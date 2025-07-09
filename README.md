@@ -14,10 +14,11 @@
 ## 技術堆疊
 
 - **執行環境**：Node.js + Bun
-- **資料庫**：MongoDB
+- **資料庫**：MariaDB
+- **資料庫套件**：Knex.js
 - **爬蟲**：Axios + Cheerio
 - **任務排程**：Cron
-- **API 框架**：Express
+- **API 框架**：Bun 原生 HTTP 伺服器
 - **AI 處理**：OpenAI API
 
 ## 快速開始

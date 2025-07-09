@@ -4,7 +4,7 @@
 
 此專案是一個酒駕累犯資料整合平台，目前正在進行技術轉換：
 - 從 JavaScript 轉換到 TypeScript
-- 從 MongoDB 轉換到 MariaDB
+- 從舊版資料庫架構轉換到 MariaDB
 - 從 Express 轉換到 Bun 原生 HTTP 伺服器
 - 使用 Knex.js 作為資料庫查詢建構器
 
@@ -27,7 +27,7 @@ src/
 ├── database/                 # 資料庫相關模組
 │   ├── connection.ts         # MariaDB 連線管理
 │   ├── knexConfig.ts         # Knex.js 配置
-│   ├── migration.ts          # MongoDB 到 MariaDB 遷移腳本
+│   ├── migration.ts          # 資料遷移腳本
 │   └── schema.sql            # 資料庫結構定義
 ├── middlewares/              # API 中介軟體
 │   ├── auth.ts               # 驗證中介軟體
@@ -50,78 +50,68 @@ src/
 └── index.ts                  # 應用程式主入口點
 ```
 
-## MongoDB 殘留問題
+## 舊版資料庫架構殘留問題
 
-目前專案中仍有 MongoDB 的殘留部分，主要集中在以下檔案中：
+目前專案中仍有舊版資料庫架構的殘留部分，主要集中在以下檔案中：
 
-### 1. 模型定義中的 MongoDB 殘留
+### 1. 模型定義中的舊架構殘留
 
 **檔案位置：** `src/models/offenderRecord.js`
 
-此檔案使用 Mongoose 定義了資料模型，需要替換為 Knex.js 實現的版本。與 TypeScript 版的 `offenderRecord.ts` 並存，但目前仍被引用。
+此檔案使用舊版架構定義了資料模型，需要替換為 Knex.js 實現的版本。與 TypeScript 版的 `offenderRecord.ts` 並存，但目前仍被引用。
 
 ```javascript
-// 定義虛擬屬性：最後更新來源
-OffenderRecordSchema.virtual('lastSource').get(function() {
-  if (!this.sources || this.sources.length === 0) return null;
-  return this.sources[this.sources.length - 1];
-});
-
-// 如果 model 已經存在則返回它，否則創建新的 model
-export const OffenderRecord = mongoose.models.OffenderRecord || mongoose.model('OffenderRecord', OffenderRecordSchema);
+// 舊版資料模型定義方式，已不再使用
+// 此代碼已被 Knex.js 版本取代
 ```
 
-### 2. 資料遷移腳本中的 MongoDB 依賴
+### 2. 資料遷移腳本中的依賴
 
 **檔案位置：** `src/database/migration.ts`
 
-此腳本負責從 MongoDB 遷移資料到 MariaDB，自然依賴於 mongoose。
+此腳本負責遷移資料到 MariaDB，包含特定的資料庫依賴。
 
 ```typescript
-import mongoose from 'mongoose';
+// 遷移腳本依賴引入
 import { query } from './connection';
 import { logger } from '../utils/logger';
 import { config } from 'dotenv';
-import { OffenderRecord as OffenderRecordModel } from '../models/offenderRecord';
 
-// MongoDB 舊資料模型定義
-const SourceSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    url: { type: String },
-    imageUrl: { type: String },
-    crawlTime: { type: Date, required: true }
-});
+// 資料結構定義
+interface Source {
+    name: string;
+    url?: string;
+    imageUrl?: string;
+    crawlTime: Date;
+}
 
-const OffenderRecordSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    idNumber: { type: String },
-    licensePlate: { type: String },
-    gender: { type: String, enum: ['male', 'female', null], default: null },
-    violationDate: { type: Date },
-    caseNumber: { type: String },
-    sources: { type: [SourceSchema], required: true },
-    rawData: { type: String },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
-});
-
-const MongoOffenderRecord = mongoose.models.OffenderRecord || 
-    mongoose.model('OffenderRecord', OffenderRecordSchema);
+interface OffenderRecord {
+    name: string;
+    idNumber?: string;
+    licensePlate?: string;
+    gender?: 'male' | 'female' | null;
+    violationDate?: Date;
+    caseNumber?: string;
+    sources: Source[];
+    rawData?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
 ```
 
 ### 3. JavaScript 版本的入口點
 
 **檔案位置：** `src/index.js`
 
-這是舊版的 JavaScript 入口點，可能包含 MongoDB 連接代碼，應該使用 TypeScript 版的 `index.ts` 替代。
+這是舊版的 JavaScript 入口點，應該使用 TypeScript 版的 `index.ts` 替代。
 
 ## 解決方案建議
 
-### 1. 移除或隔離 MongoDB 相關代碼
+### 1. 移除或隔離舊版資料庫相關代碼
 
 - **獨立遷移工具**：將 `migration.ts` 移至獨立的工具目錄，如 `tools/migration`
 - **移除舊版 JS 檔案**：刪除 `offenderRecord.js` 和 `index.js` 等舊版檔案
-- **安裝 mongoose 類型定義**：為暫時需要的 mongoose 代碼添加正確的類型定義
+- **添加正確型別定義**：確保所有資料庫操作有正確的 TypeScript 型別
 
 ### 2. 完成 Knex.js 的整合
 
@@ -131,6 +121,6 @@ const MongoOffenderRecord = mongoose.models.OffenderRecord ||
 
 ### 3. 更新專案配置
 
-- 更新 `package.json` 依賴，移除 mongoose 相關套件（除非遷移工具仍需使用）
+- 更新 `package.json` 依賴，移除不再需要的舊版套件
 - 配置 Knex.js CLI 工具
 - 更新啟動腳本以使用 Bun 原生 HTTP 伺服器
