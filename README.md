@@ -21,6 +21,56 @@
 - **API 框架**：Bun 原生 HTTP 伺服器
 - **AI 處理**：OpenAI API
 
+## 文件組織
+
+專案的文件統一存放在 `.ai` 目錄中，按照以下結構組織：
+
+```
+.ai/
+├── docs/ (核心文件)
+│   ├── project/ (專案基礎文件)
+│   │   ├── plan.md (專案計畫)
+│   │   ├── structure.md (專案結構)
+│   │   └── settings.md (專案設定)
+│   │
+│   ├── technical/ (技術文件)
+│   │   ├── database/ (資料庫相關文件)
+│   │   ├── crawler/ (爬蟲相關文件)
+│   │   └── api/ (API 相關文件)
+│   │
+│   └── tutorials/ (使用教學)
+│
+├── discussions/ (討論與會議記錄)
+└── knowledge/ (知識庫)
+```
+
+所有技術文件、討論記錄和開發計劃都存放在此結構中，便於查找和維護。
+
+## 文件索引
+
+### 專案文件
+
+* [專案計畫](.ai/docs/project/plan.md) - 整體專案規劃和里程碑
+* [專案結構](.ai/docs/project/structure.md) - 程式碼組織和架構說明
+* [專案設定](.ai/docs/project/settings.md) - 環境配置和相關設定
+
+### 技術文件
+
+#### 資料庫相關
+* [MariaDB 匯入和連接修復](.ai/docs/technical/database/mariadb-import-fixes-20250709.md) - 資料匯入流程和連接處理改進
+
+#### 爬蟲相關
+* [臺中市交通事件裁決處爬蟲成果](.ai/docs/technical/crawler/taichung-dui-crawler-achievements.md) - 爬蟲實作和成果記錄
+
+### 討論與會議記錄
+
+* [2025-07-08 除錯與啟動問題解決](.ai/discussions/2025-07-08-除錯與啟動問題解決.md)
+* [2025-07-09 OpenAI API 金鑰設定與測試](.ai/discussions/2025-07-09-OpenAI-API-金鑰設定與測試.md)
+* [2025-07-09 爬蟲分析-臺中市交通事件裁決處](.ai/discussions/2025-07-09-爬蟲分析-臺中市交通事件裁決處.md)
+* [2025-07-09 資料庫設定與遷移記錄](.ai/discussions/2025-07-09-資料庫設定與遷移記錄.md)
+
+完整的文件組織請參考 [文件索引](.ai/docs/README.md)。
+
 ## 快速開始
 
 ### 安裝相依套件
