@@ -130,13 +130,8 @@ export class OffenderRecordModel {
                 query.where('license_plate', licensePlate);
             }
 
-            if (startDate) {
-                query.where('violation_date', '>=', startDate);
-            }
-
-            if (endDate) {
-                query.where('violation_date', '<=', endDate);
-            }
+            // 因為 violation_date 不在 offenders 表中，這裡先去除日期條件
+            // 後續可以修改為聯表查詢 violations 表來加入日期條件
 
             return await query
                 .orderBy('updated_at', 'desc')

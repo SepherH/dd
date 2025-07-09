@@ -6,7 +6,7 @@
 
 import { Knex } from 'knex';
 import { logger } from '../utils/logger';
-import { config } from '../utils/config';
+import { getDatabaseConfig } from '../utils/dbEnvironment';
 
 /**
  * 資料庫環境類型
@@ -28,11 +28,8 @@ const dbConfig: DatabaseConfig = {
   development: {
     client: 'mysql2',
     connection: {
-      host: config.database.host,
-      port: config.database.port,
-      user: config.database.user,
-      password: config.database.password,
-      database: config.database.name,
+      ...getDatabaseConfig(),
+      database: process.env.DB_NAME || 'drunk_driving',
       charset: 'utf8mb4', // 支援完整 Unicode 字元集，包括表情符號和多語系文字
       timezone: '+08:00', // 台灣/亞洲時區
       typeCast: function (field: any, next: any) {
@@ -80,11 +77,8 @@ const dbConfig: DatabaseConfig = {
   production: {
     client: 'mysql2',
     connection: {
-      host: config.database.host,
-      port: config.database.port,
-      user: config.database.user,
-      password: config.database.password,
-      database: config.database.name,
+      ...getDatabaseConfig(),
+      database: process.env.DB_NAME || 'drunk_driving',
       charset: 'utf8mb4',
       timezone: '+08:00',
       typeCast: function (field: any, next: any) {
@@ -124,11 +118,8 @@ const dbConfig: DatabaseConfig = {
   testing: {
     client: 'mysql2',
     connection: {
-      host: config.database.host,
-      port: config.database.port,
-      user: config.database.user,
-      password: config.database.password,
-      database: `${config.database.name}_test`,
+      ...getDatabaseConfig(),
+      database: `${process.env.DB_NAME || 'drunk_driving'}_test`,
       charset: 'utf8mb4',
       timezone: '+08:00',
     },
@@ -160,15 +151,56 @@ try {
     logger.error(`初始化 Knex 失敗: ${error.message}`);
     logger.warn('將使用模擬模式運行，部分功能可能無法使用');
     
-    // 建立一個空的模擬 Knex 物件
+    // 建立一個更完整的模擬 Knex 物件
+    const mockQueryBuilder = {
+        where: () => mockQueryBuilder,
+        whereIn: () => mockQueryBuilder,
+        whereNotIn: () => mockQueryBuilder,
+        whereNull: () => mockQueryBuilder,
+        whereNotNull: () => mockQueryBuilder,
+        select: () => mockQueryBuilder,
+        from: () => Promise.resolve([]),
+        insert: () => Promise.resolve([1]), // 模擬插入 ID
+        update: () => Promise.resolve(0),
+        delete: () => Promise.resolve(0),
+        first: () => Promise.resolve(null),
+        orderBy: () => mockQueryBuilder,
+        limit: () => mockQueryBuilder,
+        offset: () => mockQueryBuilder,
+        count: () => Promise.resolve([{count: 0}]),
+        join: () => mockQueryBuilder,
+        leftJoin: () => mockQueryBuilder,
+        rightJoin: () => mockQueryBuilder,
+    };
+    
     knexInstance = {
         raw: () => Promise.resolve([{ result: 2 }]),
         destroy: () => Promise.resolve(),
-        select: () => ({ from: () => Promise.resolve([]) }),
-        insert: () => Promise.resolve([]),
-        update: () => Promise.resolve([]),
-        delete: () => Promise.resolve([]),
-        truncate: () => Promise.resolve([]),
+        transaction: (fn: Function) => Promise.resolve(fn(mockQueryBuilder)),
+        select: () => mockQueryBuilder,
+        insert: () => Promise.resolve([1]),
+        update: () => Promise.resolve(0),
+        delete: () => Promise.resolve(0),
+        truncate: () => Promise.resolve(0),
+        schema: {
+            hasTable: () => Promise.resolve(true),
+            createTable: () => ({
+                increments: () => {},
+                string: () => {},
+                integer: () => {},
+                boolean: () => {},
+                text: () => {},
+                timestamp: () => {},
+                date: () => {},
+            }),
+            dropTableIfExists: () => Promise.resolve(),
+        },
+        // 模擬表格設定
+        table: () => mockQueryBuilder,
+        // 加入表格名稱調用
+        offenders: () => mockQueryBuilder,
+        violations: () => mockQueryBuilder,
+        offender_sources: () => mockQueryBuilder,
     };
 }
 
@@ -177,7 +209,9 @@ export async function testConnection(): Promise<boolean> {
   try {
     await knex.raw('SELECT 1+1 AS result');
     isDatabaseAvailable = true;
-    logger.info(`已連線到 ${env} 環境的 MariaDB 資料庫 (${config.database.host}:${config.database.port}/${config.database.name})`);
+    const dbConfig = getDatabaseConfig();
+    const dbName = process.env.DB_NAME || 'drunk_driving';
+    logger.info(`已連線到 ${env} 環境的 MariaDB 資料庫 (${dbConfig.host}:${dbConfig.port}/${dbName})`);
     return true;
   } catch (error: any) {
     isDatabaseAvailable = false;

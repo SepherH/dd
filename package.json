@@ -24,6 +24,7 @@
     "author": "",
     "license": "MIT",
     "dependencies": {
+        "@types/uuid": "^10.0.0",
         "axios": "^1.10.0",
         "cheerio": "^1.1.0",
         "cron": "^3.1.0",
@@ -33,6 +34,7 @@
         "mariadb": "^3.2.2",
         "mysql2": "^3.14.1",
         "openai": "^4.16.1",
+        "uuid": "^11.1.0",
         "zod": "^3.22.4"
     },
     "devDependencies": {
