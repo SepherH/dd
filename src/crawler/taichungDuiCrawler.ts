@@ -2,6 +2,8 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import fs from 'fs/promises';
 import path from 'path';
+import { processPdfFile } from '../services/pdfParser';
+import { saveOffendersToDatabase } from '../services/databaseService';
 
 /**
  * 臺中市交通事件裁決處酒駕累犯資料爬蟲
@@ -12,6 +14,7 @@ export class TaichungDuiCrawler {
   private rawPdfsDir = path.resolve(process.cwd(), 'data/raw_pdfs');
   private processedDir = path.resolve(process.cwd(), 'data/processed');
   private extractedDir = path.resolve(process.cwd(), 'data/extracted');
+  private sourceName = 'taichung_traffic_bureau';
 
   /**
    * 初始化爬蟲
@@ -265,6 +268,37 @@ export class TaichungDuiCrawler {
   }
 
   /**
+   * 處理下載的 PDF 檔案，解析並存入資料庫
+   */
+  private async processDownloadedPdfs(filePaths: string[]): Promise<void> {
+    console.log(`開始處理 ${filePaths.length} 個 PDF 檔案...`);
+    
+    let allOffenders: any[] = [];
+    
+    for (const filePath of filePaths) {
+      try {
+        // 解析 PDF 檔案
+        const offenders = await processPdfFile(filePath);
+        
+        if (offenders && offenders.length > 0) {
+          allOffenders = [...allOffenders, ...offenders];
+          console.log(`已從 ${path.basename(filePath)} 解析出 ${offenders.length} 筆資料`);
+        }
+      } catch (error) {
+        console.error(`處理檔案 ${filePath} 時發生錯誤:`, error);
+      }
+    }
+    
+    // 將解析出的資料存入資料庫
+    if (allOffenders.length > 0) {
+      console.log(`準備將 ${allOffenders.length} 筆資料存入資料庫...`);
+      await saveOffendersToDatabase(allOffenders, this.sourceName);
+    } else {
+      console.log('沒有解析出任何有效的資料');
+    }
+  }
+  
+  /**
    * 執行完整的爬蟲流程
    */
   async run(): Promise<void> {
@@ -285,8 +319,10 @@ export class TaichungDuiCrawler {
       let allPdfLinks: { url: string; title: string }[] = [];
       
       // 針對每個資料頁面，獲取其HTML內容並提取PDF連結
-      for (let i = 0; i < Math.min(dataPageLinks.length, 5); i++) { // 限制處理前5個，避免過多請求
+      for (let i = 0; i < Math.min(dataPageLinks.length, 3); i++) { // 限制處理前3個，避免過多請求
         const { url, title } = dataPageLinks[i];
+        console.log(`處理資料頁面: ${title} (${url})`);
+        
         const dataPageHtml = await this.fetchDataPage(url);
         
         if (dataPageHtml) {
@@ -295,9 +331,11 @@ export class TaichungDuiCrawler {
           for (const pdfUrl of pdfLinks) {
             allPdfLinks.push({
               url: pdfUrl,
-              title
+              title: `${title}_${path.basename(pdfUrl)}`
             });
           }
+          
+          console.log(`從 ${title} 找到 ${pdfLinks.length} 個 PDF 連結`);
         }
       }
       
@@ -305,7 +343,7 @@ export class TaichungDuiCrawler {
       if (allPdfLinks.length === 0) {
         console.log('沒有找到PDF連結，將下載資料頁面HTML作為備份');
         
-        for (let i = 0; i < Math.min(dataPageLinks.length, 3); i++) {
+        for (let i = 0; i < Math.min(dataPageLinks.length, 2); i++) {
           const { url, title } = dataPageLinks[i];
           const sanitizedTitle = title.replace(/[\/:*?"<>|]/g, '_');
           const htmlPath = path.join(this.rawPdfsDir, `${sanitizedTitle}.html`);
@@ -324,18 +362,35 @@ export class TaichungDuiCrawler {
       console.log(`找到 ${allPdfLinks.length} 個PDF連結，開始下載...`);
       
       // 下載所有PDF
-      const downloadedFiles = await Promise.all(
-        allPdfLinks.map(({ url, title }) => this.downloadPdf(url, title))
-      );
+      const downloadedFiles: string[] = [];
       
-      const successfulDownloads = downloadedFiles.filter(Boolean) as string[];
+      // 限制同時下載的檔案數量，避免過多請求
+      const MAX_CONCURRENT_DOWNLOADS = 2;
+      
+      for (let i = 0; i < allPdfLinks.length; i += MAX_CONCURRENT_DOWNLOADS) {
+        const batch = allPdfLinks.slice(i, i + MAX_CONCURRENT_DOWNLOADS);
+        const batchResults = await Promise.all(
+          batch.map(({ url, title }) => this.downloadPdf(url, title))
+        );
+        
+        const successfulDownloads = batchResults.filter(Boolean) as string[];
+        downloadedFiles.push(...successfulDownloads);
+        
+        // 處理已下載的檔案
+        if (successfulDownloads.length > 0) {
+          await this.processDownloadedPdfs(successfulDownloads);
+        }
+        
+        // 添加延遲，避免觸發反爬蟲機制
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
       
       // 分類PDF
-      if (successfulDownloads.length > 0) {
+      if (downloadedFiles.length > 0) {
         await this.categorizePdfs();
       }
       
-      console.log('爬蟲任務完成!');
+      console.log('爬蟲任務完成! 所有資料已處理並存入資料庫。');
     } catch (error) {
       console.error('爬蟲執行失敗:', error);
     }
